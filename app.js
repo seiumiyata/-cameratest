@@ -6,6 +6,7 @@ class BarcodeReader {
         this.selectedCameraId = null;
         this.lastScanned = '';
         this.audio = document.getElementById('beep-audio');
+        this.lastScanStatus = false; // 直前フレームが成功かどうか
 
         this.initElements();
         this.bindEvents();
@@ -19,6 +20,9 @@ class BarcodeReader {
         this.errorElement = document.getElementById('error-message');
         this.cameraSelect = document.getElementById('camera-select');
         this.soundBtn = document.getElementById('sound-btn');
+        this.readerDiv = document.getElementById('reader');
+        this.controlsDiv = document.getElementById('controls');
+        this.rescanBtn = document.getElementById('rescan-btn');
     }
 
     bindEvents() {
@@ -26,6 +30,7 @@ class BarcodeReader {
         this.stopBtn.addEventListener('click', () => this.stopScanning());
         this.cameraSelect.addEventListener('change', () => this.onCameraChange());
         this.soundBtn.addEventListener('click', () => this.enableSound());
+        this.rescanBtn.addEventListener('click', () => this.rescan());
     }
 
     enableSound() {
@@ -49,7 +54,6 @@ class BarcodeReader {
         try {
             this.cameras = await Html5Qrcode.getCameras();
             if (this.cameras && this.cameras.length > 0) {
-                // リアカメラ優先で初期選択
                 let defaultCamera = this.cameras.find(camera =>
                     camera.label.toLowerCase().includes('back') ||
                     camera.label.toLowerCase().includes('rear')
@@ -101,7 +105,7 @@ class BarcodeReader {
                 this.selectedCameraId,
                 config,
                 (decodedText) => this.onScanSuccess(decodedText),
-                () => {}
+                (errorMessage) => this.onScanFailure(errorMessage)
             );
             this.isScanning = true;
             this.startBtn.disabled = true;
@@ -109,6 +113,10 @@ class BarcodeReader {
             this.cameraSelect.disabled = true;
             this.showError('');
             this.lastScanned = '';
+            this.lastScanStatus = false;
+            this.readerDiv.classList.remove('hidden');
+            this.controlsDiv.classList.remove('hidden');
+            this.rescanBtn.classList.add('hidden');
         } catch (error) {
             this.showError(`スキャンを開始できませんでした: ${error.message}`);
         }
@@ -129,7 +137,16 @@ class BarcodeReader {
         }
     }
 
+    onScanFailure(errorMessage) {
+        this.lastScanStatus = false;
+    }
+
     onScanSuccess(decodedText) {
+        if (!this.lastScanStatus) {
+            this.playBeep(); // ピントが合った瞬間に音
+        }
+        this.lastScanStatus = true;
+
         const numbers = decodedText.replace(/\D/g, '');
         if (numbers && numbers !== this.lastScanned) {
             this.resultElement.textContent = numbers;
@@ -137,14 +154,27 @@ class BarcodeReader {
             setTimeout(() => {
                 this.resultElement.style.backgroundColor = '';
             }, 1000);
-            this.playBeep();
             this.lastScanned = numbers;
-            this.stopScanning(); // 1回で自動停止
+            this.stopScanning();
+            this.hideCameraView();
         }
     }
 
+    hideCameraView() {
+        this.readerDiv.classList.add('hidden');
+        this.controlsDiv.classList.add('hidden');
+        this.rescanBtn.classList.remove('hidden');
+    }
+
+    rescan() {
+        this.resultElement.textContent = 'まだスキャンされていません';
+        this.readerDiv.classList.remove('hidden');
+        this.controlsDiv.classList.remove('hidden');
+        this.rescanBtn.classList.add('hidden');
+        this.startScanning();
+    }
+
     playBeep() {
-        // 効果音を再生
         this.audio.currentTime = 0;
         this.audio.play().catch(()=>{});
     }
