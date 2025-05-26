@@ -86,12 +86,15 @@
             margin-top: 10px;
             display: none;
         }
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>バーコードリーダー</h1>
-        <div class="controls">
+        <div class="controls" id="controls">
             <select id="camera-select"></select>
             <button id="start-btn">スキャン開始</button>
             <button id="stop-btn" disabled>スキャン停止</button>
@@ -101,11 +104,12 @@
         <div id="result">
             <h3>読み取り結果:</h3>
             <p id="barcode-result">まだスキャンされていません</p>
+            <button id="rescan-btn" class="hidden">再スキャン</button>
         </div>
         <div id="error-message" class="error"></div>
     </div>
     <audio id="beep-audio" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=" preload="auto"></audio>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="./html5-qrcode.min.js"></script>
     <script src="./app.js"></script>
 </body>
 </html>
