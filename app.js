@@ -6,7 +6,7 @@ class BarcodeReader {
         this.selectedCameraId = null;
         this.lastScanned = '';
         this.audio = document.getElementById('beep-audio');
-        this.lastScanStatus = false; // 直前フレームが成功かどうか
+        this.lastScanStatus = false;
 
         this.initElements();
         this.bindEvents();
@@ -34,7 +34,6 @@ class BarcodeReader {
     }
 
     enableSound() {
-        // iOSで音を有効化するために一度再生
         this.audio.play().catch(()=>{});
     }
 
@@ -46,7 +45,8 @@ class BarcodeReader {
                 await this.getCameras();
             }
         } catch (error) {
-            this.showError('カメラへのアクセス権限が必要です。');
+            this.showError('カメラへのアクセス権限が必要です。ブラウザの設定でカメラを許可してください。');
+            console.error('Camera permission error:', error);
         }
     }
 
@@ -54,6 +54,7 @@ class BarcodeReader {
         try {
             this.cameras = await Html5Qrcode.getCameras();
             if (this.cameras && this.cameras.length > 0) {
+                // 修正：this.cameras.id → this.cameras[0].id
                 let defaultCamera = this.cameras.find(camera =>
                     camera.label.toLowerCase().includes('back') ||
                     camera.label.toLowerCase().includes('rear')
@@ -61,13 +62,16 @@ class BarcodeReader {
                 this.cameras.find(camera =>
                     camera.label.toLowerCase().includes('front')
                 )?.id ||
-                this.cameras[0].id;
+                this.cameras[0].id; // ← ここを修正！
 
                 this.populateCameraSelect(defaultCamera);
                 this.selectedCameraId = defaultCamera;
+            } else {
+                this.showError('利用可能なカメラが見つかりません。');
             }
         } catch (error) {
-            this.showError('カメラの取得に失敗しました。');
+            this.showError('カメラの取得に失敗しました。ブラウザでカメラが許可されているか確認してください。');
+            console.error('Get cameras error:', error);
         }
     }
 
@@ -119,6 +123,7 @@ class BarcodeReader {
             this.rescanBtn.classList.add('hidden');
         } catch (error) {
             this.showError(`スキャンを開始できませんでした: ${error.message}`);
+            console.error('Start scanning error:', error);
         }
     }
 
@@ -133,7 +138,7 @@ class BarcodeReader {
             this.stopBtn.disabled = true;
             this.cameraSelect.disabled = false;
         } catch (error) {
-            // 無視
+            console.error('Stop scanning error:', error);
         }
     }
 
@@ -143,7 +148,7 @@ class BarcodeReader {
 
     onScanSuccess(decodedText) {
         if (!this.lastScanStatus) {
-            this.playBeep(); // ピントが合った瞬間に音
+            this.playBeep();
         }
         this.lastScanStatus = true;
 
@@ -189,7 +194,6 @@ class BarcodeReader {
     }
 }
 
-// PWA対応
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js');
 }
