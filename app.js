@@ -4,6 +4,8 @@ class BarcodeReader {
         this.isScanning = false;
         this.cameras = [];
         this.selectedCameraId = null;
+        this.lastScanned = '';
+        this.audio = document.getElementById('beep-audio');
 
         this.initElements();
         this.bindEvents();
@@ -16,20 +18,25 @@ class BarcodeReader {
         this.resultElement = document.getElementById('barcode-result');
         this.errorElement = document.getElementById('error-message');
         this.cameraSelect = document.getElementById('camera-select');
+        this.soundBtn = document.getElementById('sound-btn');
     }
 
     bindEvents() {
         this.startBtn.addEventListener('click', () => this.startScanning());
         this.stopBtn.addEventListener('click', () => this.stopScanning());
         this.cameraSelect.addEventListener('change', () => this.onCameraChange());
+        this.soundBtn.addEventListener('click', () => this.enableSound());
+    }
+
+    enableSound() {
+        // iOSで音を有効化するために一度再生
+        this.audio.play().catch(()=>{});
     }
 
     async requestCameraPermission() {
         try {
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' } 
-                });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 stream.getTracks().forEach(track => track.stop());
                 await this.getCameras();
             }
@@ -75,7 +82,6 @@ class BarcodeReader {
 
     onCameraChange() {
         this.selectedCameraId = this.cameraSelect.value;
-        // スキャン中ならカメラ切り替えを即時反映
         if (this.isScanning) {
             this.stopScanning().then(() => this.startScanning());
         }
@@ -86,26 +92,23 @@ class BarcodeReader {
 
         try {
             this.html5QrCode = new Html5Qrcode("reader");
-
             const config = {
                 fps: 10,
                 qrbox: { width: 250, height: 250 },
                 supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
             };
-
             await this.html5QrCode.start(
-                this.selectedCameraId || { facingMode: "environment" },
+                this.selectedCameraId,
                 config,
                 (decodedText) => this.onScanSuccess(decodedText),
-                () => {} // エラーは無視
+                () => {}
             );
-
             this.isScanning = true;
             this.startBtn.disabled = true;
             this.stopBtn.disabled = false;
             this.cameraSelect.disabled = true;
             this.showError('');
-
+            this.lastScanned = '';
         } catch (error) {
             this.showError(`スキャンを開始できませんでした: ${error.message}`);
         }
@@ -113,33 +116,37 @@ class BarcodeReader {
 
     async stopScanning() {
         if (!this.isScanning || !this.html5QrCode) return;
-
         try {
             await this.html5QrCode.stop();
             this.html5QrCode.clear();
             this.html5QrCode = null;
-
             this.isScanning = false;
             this.startBtn.disabled = false;
             this.stopBtn.disabled = true;
             this.cameraSelect.disabled = false;
         } catch (error) {
-            console.error('スキャン停止エラー:', error);
+            // 無視
         }
     }
 
     onScanSuccess(decodedText) {
         const numbers = decodedText.replace(/\D/g, '');
-
-        if (numbers) {
+        if (numbers && numbers !== this.lastScanned) {
             this.resultElement.textContent = numbers;
             this.resultElement.style.backgroundColor = '#d4edda';
             setTimeout(() => {
                 this.resultElement.style.backgroundColor = '';
             }, 1000);
-        } else {
-            this.resultElement.textContent = `${decodedText}（数字なし）`;
+            this.playBeep();
+            this.lastScanned = numbers;
+            this.stopScanning(); // 1回で自動停止
         }
+    }
+
+    playBeep() {
+        // 効果音を再生
+        this.audio.currentTime = 0;
+        this.audio.play().catch(()=>{});
     }
 
     showError(message) {
@@ -152,12 +159,11 @@ class BarcodeReader {
     }
 }
 
-// PWA対応（sw.jsのパスを修正）
+// PWA対応
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js');
 }
 
-// アプリ初期化
 document.addEventListener('DOMContentLoaded', () => {
     new BarcodeReader();
 });
