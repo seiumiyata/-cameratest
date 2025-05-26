@@ -1,5 +1,11 @@
 const CACHE_NAME = 'barcode-v1';
-const urlsToCache = ['/', '/app.js', '/manifest.json'];
+const urlsToCache = [
+    '/-cameratest/',
+    '/-cameratest/index.html',
+    '/-cameratest/app.js',
+    '/-cameratest/manifest.json',
+    '/-cameratest/icon-192.png'
+];
 
 self.addEventListener('install', event => {
     event.waitUntil(
