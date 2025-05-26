@@ -38,7 +38,7 @@
             text-align: center;
             margin: 20px 0;
         }
-        button {
+        button, select {
             background-color: #007AFF;
             color: white;
             border: none;
@@ -48,6 +48,16 @@
             font-size: 16px;
             cursor: pointer;
             transition: background-color 0.3s;
+        }
+        select {
+            color: #333;
+            background-color: #f0f0f0;
+            padding: 10px 16px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
         }
         button:disabled {
             background-color: #ccc;
@@ -81,11 +91,12 @@
 <body>
     <div class="container">
         <h1>バーコードリーダー</h1>
-        <div id="reader" style="width: 100%; max-width: 500px;"></div>
         <div class="controls">
+            <select id="camera-select"></select>
             <button id="start-btn">スキャン開始</button>
             <button id="stop-btn" disabled>スキャン停止</button>
         </div>
+        <div id="reader" style="width: 100%; max-width: 500px;"></div>
         <div id="result">
             <h3>読み取り結果:</h3>
             <p id="barcode-result">まだスキャンされていません</p>
