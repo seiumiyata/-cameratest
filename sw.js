@@ -1,8 +1,9 @@
-const CACHE_NAME = 'barcode-v1';
+const CACHE_NAME = 'barcode-v2';
 const urlsToCache = [
     '/-cameratest/',
     '/-cameratest/index.html',
     '/-cameratest/app.js',
+    '/-cameratest/html5-qrcode.min.js',
     '/-cameratest/manifest.json',
     '/-cameratest/icon-192.png'
 ];
