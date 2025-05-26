@@ -15,11 +15,13 @@ class BarcodeReader {
         this.stopBtn = document.getElementById('stop-btn');
         this.resultElement = document.getElementById('barcode-result');
         this.errorElement = document.getElementById('error-message');
+        this.cameraSelect = document.getElementById('camera-select');
     }
 
     bindEvents() {
         this.startBtn.addEventListener('click', () => this.startScanning());
         this.stopBtn.addEventListener('click', () => this.stopScanning());
+        this.cameraSelect.addEventListener('change', () => this.onCameraChange());
     }
 
     async requestCameraPermission() {
@@ -40,20 +42,42 @@ class BarcodeReader {
         try {
             this.cameras = await Html5Qrcode.getCameras();
             if (this.cameras && this.cameras.length > 0) {
-                // リアカメラを優先的に選択
-                this.selectedCameraId = this.cameras.find(camera => 
+                // リアカメラ優先で初期選択
+                let defaultCamera = this.cameras.find(camera =>
                     camera.label.toLowerCase().includes('back') ||
                     camera.label.toLowerCase().includes('rear')
                 )?.id ||
-                // リアカメラがなければフロントカメラを選択
-                this.cameras.find(camera => 
+                this.cameras.find(camera =>
                     camera.label.toLowerCase().includes('front')
                 )?.id ||
-                // どちらも判別できない場合は最初のカメラ
                 this.cameras[0].id;
+
+                this.populateCameraSelect(defaultCamera);
+                this.selectedCameraId = defaultCamera;
             }
         } catch (error) {
             this.showError('カメラの取得に失敗しました。');
+        }
+    }
+
+    populateCameraSelect(defaultCameraId) {
+        this.cameraSelect.innerHTML = '';
+        this.cameras.forEach(camera => {
+            const option = document.createElement('option');
+            option.value = camera.id;
+            option.text = camera.label || `カメラ${camera.id}`;
+            if (camera.id === defaultCameraId) {
+                option.selected = true;
+            }
+            this.cameraSelect.appendChild(option);
+        });
+    }
+
+    onCameraChange() {
+        this.selectedCameraId = this.cameraSelect.value;
+        // スキャン中ならカメラ切り替えを即時反映
+        if (this.isScanning) {
+            this.stopScanning().then(() => this.startScanning());
         }
     }
 
@@ -79,6 +103,7 @@ class BarcodeReader {
             this.isScanning = true;
             this.startBtn.disabled = true;
             this.stopBtn.disabled = false;
+            this.cameraSelect.disabled = true;
             this.showError('');
 
         } catch (error) {
@@ -97,6 +122,7 @@ class BarcodeReader {
             this.isScanning = false;
             this.startBtn.disabled = false;
             this.stopBtn.disabled = true;
+            this.cameraSelect.disabled = false;
         } catch (error) {
             console.error('スキャン停止エラー:', error);
         }
