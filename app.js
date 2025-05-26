@@ -4,24 +4,24 @@ class BarcodeReader {
         this.isScanning = false;
         this.cameras = [];
         this.selectedCameraId = null;
-        
+
         this.initElements();
         this.bindEvents();
         this.requestCameraPermission();
     }
-    
+
     initElements() {
         this.startBtn = document.getElementById('start-btn');
         this.stopBtn = document.getElementById('stop-btn');
         this.resultElement = document.getElementById('barcode-result');
         this.errorElement = document.getElementById('error-message');
     }
-    
+
     bindEvents() {
         this.startBtn.addEventListener('click', () => this.startScanning());
         this.stopBtn.addEventListener('click', () => this.stopScanning());
     }
-    
+
     async requestCameraPermission() {
         try {
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -35,57 +35,65 @@ class BarcodeReader {
             this.showError('カメラへのアクセス権限が必要です。');
         }
     }
-    
+
     async getCameras() {
         try {
             this.cameras = await Html5Qrcode.getCameras();
             if (this.cameras && this.cameras.length > 0) {
+                // リアカメラを優先的に選択
                 this.selectedCameraId = this.cameras.find(camera => 
-                    camera.label.toLowerCase().includes('back')
-                )?.id || this.cameras[0].id;
+                    camera.label.toLowerCase().includes('back') ||
+                    camera.label.toLowerCase().includes('rear')
+                )?.id ||
+                // リアカメラがなければフロントカメラを選択
+                this.cameras.find(camera => 
+                    camera.label.toLowerCase().includes('front')
+                )?.id ||
+                // どちらも判別できない場合は最初のカメラ
+                this.cameras[0].id;
             }
         } catch (error) {
             this.showError('カメラの取得に失敗しました。');
         }
     }
-    
+
     async startScanning() {
         if (this.isScanning) return;
-        
+
         try {
             this.html5QrCode = new Html5Qrcode("reader");
-            
+
             const config = {
                 fps: 10,
                 qrbox: { width: 250, height: 250 },
                 supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
             };
-            
+
             await this.html5QrCode.start(
                 this.selectedCameraId || { facingMode: "environment" },
                 config,
                 (decodedText) => this.onScanSuccess(decodedText),
                 () => {} // エラーは無視
             );
-            
+
             this.isScanning = true;
             this.startBtn.disabled = true;
             this.stopBtn.disabled = false;
             this.showError('');
-            
+
         } catch (error) {
             this.showError(`スキャンを開始できませんでした: ${error.message}`);
         }
     }
-    
+
     async stopScanning() {
         if (!this.isScanning || !this.html5QrCode) return;
-        
+
         try {
             await this.html5QrCode.stop();
             this.html5QrCode.clear();
             this.html5QrCode = null;
-            
+
             this.isScanning = false;
             this.startBtn.disabled = false;
             this.stopBtn.disabled = true;
@@ -93,10 +101,10 @@ class BarcodeReader {
             console.error('スキャン停止エラー:', error);
         }
     }
-    
+
     onScanSuccess(decodedText) {
         const numbers = decodedText.replace(/\D/g, '');
-        
+
         if (numbers) {
             this.resultElement.textContent = numbers;
             this.resultElement.style.backgroundColor = '#d4edda';
@@ -107,7 +115,7 @@ class BarcodeReader {
             this.resultElement.textContent = `${decodedText}（数字なし）`;
         }
     }
-    
+
     showError(message) {
         if (message) {
             this.errorElement.textContent = message;
@@ -118,9 +126,9 @@ class BarcodeReader {
     }
 }
 
-// PWA対応
+// PWA対応（sw.jsのパスを修正）
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
+    navigator.serviceWorker.register('./sw.js');
 }
 
 // アプリ初期化
